@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require('path');
+const mtga = require('./mtga');
 
 function getMTGAInstallPath() {
     var paths = [
@@ -57,33 +58,10 @@ function getCardDatabase() {
         return "";
     }
 
-    var titleIdToTitle = {};
-    {
-        const data = fs.readFileSync(locDataPath, 'UTF-8');
-        const localizations = JSON.parse(data);
+    const data_loc = fs.readFileSync(locDataPath, 'UTF-8');
+    const data_cards = fs.readFileSync(cardDataPath, 'UTF-8');
 
-        const enUS = localizations.find((localization) => localization.isoCode == "en-US");
-        if (enUS != null) {
-            enUS.keys.forEach((mapping) => {
-                titleIdToTitle[mapping.id] = mapping.text;
-            })
-        }
-    }
-
-    var cardDb = {};
-    {
-        const data = fs.readFileSync(cardDataPath, 'UTF-8');
-        const cards = JSON.parse(data);
-
-        cards.forEach((card) => {
-            cardDb[card.grpid] = {
-                name: titleIdToTitle[card.titleId],
-                metadata: card
-            };
-        });
-    }
-
-    return cardDb;
+    return mtga.getCardDatabase(data_loc, data_cards);
 }
 
 function getMyCards() {
@@ -94,60 +72,9 @@ function getMyCards() {
         return "";
     }
 
-    const data = fs.readFileSync(logFilePath, 'UTF-8');
-    const lines = data.split(/\r?\n/);
+    const data_log = fs.readFileSync(logFilePath, 'UTF-8');
 
-    var out = [];
-
-    lines.forEach((line) => {
-        if (line.includes(`PlayerInventory.GetPlayerCards`)) {
-            out.push(line);
-        }
-    });
-    out.sort((a,b) => {
-        return b.length - a.length;
-    })
-    if (out.length == 0) {
-        return {};
-    }
-
-    var cards = {};
-    {
-        const log = out[0];
-        const firstBrace = log.indexOf("{");
-        const lastBrace =  log.lastIndexOf("}");
-
-        const cardListJson = log.substring(firstBrace, lastBrace + 1);
-        const cardIdsToCount =  JSON.parse(cardListJson).payload;
-
-        const cardDb = getCardDatabase();
-        Object.keys(cardIdsToCount).forEach((cardId) => {
-            if (!(cardId in cardDb)) {
-                console.log(`Can't find ${cardId}`);
-                return;
-            }
-
-            const card = cardDb[cardId];
-
-            // Skip basic lands
-            if (card.metadata.rarity == 1) {
-                return;
-            }
-
-            if (card.name in cards) {
-                cards[card.name].push({
-                    set: card.metadata.set,
-                    count: cardIdsToCount[cardId]
-                });
-            } else {
-                cards[card.name] = [{
-                    set: card.metadata.set,
-                    count: cardIdsToCount[cardId]
-                }];
-            }
-        });
-    }
-    return cards;
+    return mtga.getMyCards(data_log, getCardDatabase());
 }
 
 fs.writeFileSync("output.json", JSON.stringify(getMyCards()));

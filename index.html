@@ -1,0 +1,152 @@
+<html>
+
+<head>
+    <title>Test</title>
+    <style>
+        html,body {
+            margin: 0;
+            padding: 0;
+        }
+        #drop_zone {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black;
+        }
+        #instructions {
+            display: block;
+            padding: 1em;
+            width: 40em;
+            background-color: white;
+        }
+        #instructions li {
+            padding: 0.2em;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="drop_zone" ondragover="preventDefault(event);" ondrop="dropFile(event);">
+        <div id="instructions">
+            <p>
+                <h1>Magic the Gathering Arena Card Exporter</h2>
+                <p>
+                    To make this work you need to:
+                    <ul>
+                        <li>
+                            Enable full logs in Settings -> Account -> Detailed Logs (Plugin Support)
+                        </li>
+                        <li>
+                            Open Decks -> Collection
+                        </li>
+                    </ul>
+                    Open the MTGA data folder:
+                    <ul>
+                        <li>
+                            If you've installed from the website:<br/>
+                            <b>C:\Program Files\Wizards of the Coast\MTGA\MTGA_Data</b>
+                        </li>
+                        <li>
+                            If you've installed from the Epic Games Store:<br/>
+                            <b>C:\Program Files\Epic Games\MagicTheGathering\MTGA_Data</b>
+                        </li>
+                    </ul>
+                    and drag the newest files to this window:
+                    <ul>
+                        <li>
+                            <span id="found_data_cards" style="color: red"><b>Downloads\Data\data_cards_*.mtga</b></span>
+                        </li>
+                        <li>
+                            <span id="found_data_loc" style="color: red"><b>Downloads\Data\data_loc_*.mtga</b></span>
+                        </li>
+                        <li>
+                            <span id="found_data_logs" style="color: red"><b>Logs\Logs\UTC_Log - *.log</b></span>
+                        </li>
+                    </ul>
+                    then click <a id="can_download" href="#" style="color: red" onclick="downloadCards()"><b>Download</b></a>
+                </p>
+            </p>
+        </div>
+    </div>
+    <script src="./mtga.js"></script>
+    <script>
+        function preventDefault(ev) {
+            ev.preventDefault();
+        }
+        function getFilesFromDrop(ev) {
+            ev.preventDefault();
+
+            var files = [];
+            if (ev.dataTransfer.items) {
+                for (var i = 0; i < ev.dataTransfer.items.length; i++) {
+                    if (ev.dataTransfer.items[i].kind === 'file') {
+                        const file = ev.dataTransfer.items[i].getAsFile();
+                        files.push(file);
+                    }
+                }
+            } else {
+                for (var i = 0; i < ev.dataTransfer.files.length; i++) {
+                    const file = ev.dataTransfer.files[i];
+                    files.push(file);
+                }
+            }
+            return files;
+        }
+
+        var data_cards = "";
+        var data_loc = "";
+        var data_logs = "";
+
+        async function dropFile(ev) {
+            const files = getFilesFromDrop(ev);
+
+            for (var i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file.name.startsWith("data_cards_") && file.name.endsWith(".mtga")) {
+                    data_cards = await file.text();
+                    if (data_cards.length > 0) {
+                        document.getElementById("found_data_cards").style.color = "green";
+                    }
+                } else if (file.name.startsWith("data_loc_") && file.name.endsWith(".mtga")) {
+                    data_loc = await file.text();
+                    if (data_loc.length > 0) {
+                        document.getElementById("found_data_loc").style.color = "green";
+                    }
+                } else if (file.name.endsWith(".log")) {
+                    data_logs = await file.text();
+                    if (data_logs.length > 0) {
+                        document.getElementById("found_data_logs").style.color = "green";
+                    }
+                }
+            }
+
+            if (data_cards.length > 0 && data_loc.length > 0 && data_logs.length > 0) {
+                document.getElementById("can_download").style.color = "green";
+            }
+        }
+
+        function downloadCards() {
+            if (data_cards.length > 0 && data_loc.length > 0 && data_logs.length > 0) {
+                const cardDb = mtga.getCardDatabase(data_loc, data_cards);
+                const myCards = mtga.getMyCards(data_logs, cardDb);
+
+                var element = document.createElement('a');
+                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(JSON.stringify(myCards)));
+                element.setAttribute('download', "cards.json");
+
+                element.style.display = 'none';
+                document.body.appendChild(element);
+
+                element.click();
+
+                document.body.removeChild(element);
+            }
+        }
+    </script>
+</body>
+
+</html>
