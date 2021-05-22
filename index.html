@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <title>Test</title>
+    <title>MTGA Card Exporter</title>
     <style>
         html,body {
             margin: 0;
@@ -67,6 +67,7 @@
                             <span id="found_data_logs" style="color: red"><b>Logs\Logs\UTC_Log - *.log</b></span>
                         </li>
                     </ul>
+                    or <input type="file" multiple="multiple" id="file" onChange="handleFile(event)"></input><br/><br/>
                     then click <a id="can_download" href="#" style="color: red" onclick="downloadCards()"><b>Download</b></a>
                 </p>
             </p>
@@ -127,6 +128,54 @@
             if (data_cards.length > 0 && data_loc.length > 0 && data_logs.length > 0) {
                 document.getElementById("can_download").style.color = "green";
             }
+        }
+
+        async function handleFile(ev) {
+            ev.preventDefault();
+
+            const files = ev.target.files;
+            for (var i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                if (file.name.startsWith("data_cards_") && file.name.endsWith(".mtga")) {
+                    var reader = new FileReader();
+                    reader.onload = (e) => {
+                        data_cards = e.target.result;
+                        if (data_cards.length > 0) {
+                            document.getElementById("found_data_cards").style.color = "green";
+                        }
+                        if (data_cards.length > 0 && data_loc.length > 0 && data_logs.length > 0) {
+                            document.getElementById("can_download").style.color = "green";
+                        }
+                    };
+                    reader.readAsText(file);
+                } else if (file.name.startsWith("data_loc_") && file.name.endsWith(".mtga")) {
+                    var reader = new FileReader();
+                    reader.onload = (e) => {
+                        data_loc = e.target.result;
+                        if (data_loc.length > 0) {
+                            document.getElementById("found_data_loc").style.color = "green";
+                        }
+                        if (data_cards.length > 0 && data_loc.length > 0 && data_logs.length > 0) {
+                            document.getElementById("can_download").style.color = "green";
+                        }
+                    };
+                    reader.readAsText(file);
+                } else if (file.name.endsWith(".log")) {
+                    var reader = new FileReader();
+                    reader.onload = (e) => {
+                        data_logs = e.target.result;
+                        if (data_logs.length > 0) {
+                            document.getElementById("found_data_logs").style.color = "green";
+                        }
+                        if (data_cards.length > 0 && data_loc.length > 0 && data_logs.length > 0) {
+                            document.getElementById("can_download").style.color = "green";
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            }
+            ev.target.value = "";
         }
 
         function downloadCards() {
